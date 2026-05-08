@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "307860351450",
+    "project_id": "maricielocalzado",
+    "storage_bucket": "maricielocalzado.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307860351450:android:92462a9e0d473cd544f8e3",
+        "android_client_info": {
+          "package_name": "com.example.calzados_luciana"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiLRSJPCzbgoLvoCSIH_gogiPlW1VF2kY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307860351450:android:93f51ef33a4850f744f8e3",
+        "android_client_info": {
+          "package_name": "com.proyecto.maricielocalzado"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiLRSJPCzbgoLvoCSIH_gogiPlW1VF2kY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,270 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:calzados_luciana/models/product_model.dart';
+import 'package:http/http.dart' as http;
+
+import '../models/order_model.dart';
+
+class ApiService {
+  static const String baseUrl =
+      "https://abrasive-paper-vanish.ngrok-free.dev/api";
+
+  static Future<List<Pedido>> getPedidos() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/showpedidos"));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        return List<Pedido>.from(
+          data.map((x) => Pedido.fromJson(x)),
+        );
+      }
+      // 🔴 Error del servidor
+      else if (response.statusCode >= 500) {
+        throw Exception("🚫 Servicio no disponible (servidor caído)");
+      }
+      // 🟠 Error del cliente (400, 404, etc)
+      else {
+        throw Exception("⚠️ Error al cargar pedidos (${response.statusCode})");
+      }
+    } on SocketException {
+      // ❌ Sin internet
+      throw Exception("📡 Sin conexión a internet");
+    } on TimeoutException {
+      // ⏱ Timeout
+      throw Exception("⏳ El servidor no responde (timeout)");
+    } catch (e) {
+      // ⚠️ Error general
+      throw Exception("❌ Error inesperado: $e");
+    }
+  }
+
+  static Future<void> updateEstado(String id, String estado) async {
+    await http.put(
+      Uri.parse("$baseUrl/pedidos/$id"),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({"estado": estado}),
+    );
+  }
+
+  static Future<Map<String, dynamic>> subirComprobante( String pedidoId,String base64Img,) async {
+    final url = Uri.parse("$baseUrl/pedidos/addcomprobante");
+
+    try {
+      final body = {
+        "pedido_id": pedidoId,
+        "image": base64Img,
+      };
+
+      // 🔥 DEBUG (ver qué envías)
+      print("📤 BODY: ${jsonEncode(body)}");
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      // 🔥 DEBUG (ver respuesta cruda)
+      print("📥 STATUS: ${response.statusCode}");
+      print("📥 BODY: ${response.body}");
+
+      Map<String, dynamic> data;
+
+      try {
+        data = jsonDecode(response.body);
+      } catch (e) {
+        throw Exception("Respuesta inválida del servidor");
+      }
+
+      // 🔴 ERROR HTTP
+      if (response.statusCode != 200) {
+        throw Exception(
+          data['message'] ?? "Error HTTP ${response.statusCode}",
+        );
+      }
+
+      // 🔴 ERROR LÓGICO DEL BACKEND
+      if (data['success'] != true) {
+        throw Exception(
+          data['message'] ?? "Error desconocido del backend",
+        );
+      }
+
+      // ✅ TODO OK
+      return data;
+
+    } catch (e) {
+      // 🔥 DEBUG FINAL
+      print("❌ ERROR subirComprobante: $e");
+
+      rethrow; // importante → lo manejas en el UI
+    }
+  }
+
+  static Future<Map<String, dynamic>> marcarEnviado(String pedidoId) async {
+    final url = Uri.parse("$baseUrl/pedidos/enviado");
+
+    try {
+      final body = {
+        "pedido_id": pedidoId
+      };
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      Map<String, dynamic> data;
+
+      try {
+        data = jsonDecode(response.body);
+      } catch (e) {
+        throw Exception("Respuesta inválida del servidor");
+      }
+
+      // 🔴 ERROR HTTP
+      if (response.statusCode != 200) {
+        throw Exception(
+          data['message'] ?? "Error HTTP ${response.statusCode}",
+        );
+      }
+
+      // 🔴 ERROR LÓGICO DEL BACKEND
+      if (data['success'] != true) {
+        throw Exception(
+          data['message'] ?? "Error desconocido del backend",
+        );
+      }
+
+      // ✅ TODO OK
+      return data;
+
+    } catch (e) {
+      // 🔥 DEBUG FINAL
+      print("❌ ERROR subirComprobante: $e");
+
+      rethrow; // importante → lo manejas en el UI
+    }
+  }
+  static Future<List<Product>> getProductos() async {
+    try {
+
+      final response = await http.get(Uri.parse("$baseUrl/showproductos"));
+
+      if(response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        return List<Product>.from(
+          data.map((x) => Product.fromJson(x)),
+        );
+      }
+        else if(response.statusCode >= 500){
+        throw Exception("🚫 Servicio no disponible (servidor caído)");
+      }
+      else {
+        throw Exception("⚠️ Error al cargar pedidos (${response.statusCode})");
+      }
+    } on SocketException{
+      // ❌ Sin internet
+      throw Exception("📡 Sin conexión a internet");
+    } on TimeoutException {
+      // ⏱ Timeout
+      throw Exception("⏳ El servidor no responde (timeout)");
+    } catch (e) {
+      // ⚠️ Error general
+      throw Exception("❌ Error inesperado: $e");
+    }
+  }
+  static Future<List<Map<String, dynamic>>> getImagenes(List<Map<String, String>> productos) async {
+
+    final response = await http.post(
+      Uri.parse("$baseUrl/productos/imagenes"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(productos),
+    );
+
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(jsonData['data']);
+    }
+    else {
+      throw Exception("Error servidor");
+    }
+  }
+  // ─────────────────────────────────────────────
+  // DASHBOARD
+  // ─────────────────────────────────────────────
+
+  /// Estadísticas rápidas: total_productos, sin_stock, stock_bajo
+  static Future<Map<String, dynamic>> getDashboardStats() async {
+    try {
+      final response =
+      await http.get(Uri.parse("$baseUrl/dashboard/stats")).timeout(
+        const Duration(seconds: 30),
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['success'] == true) return body['data'];
+        throw Exception(body['message'] ?? 'Error en stats');
+      }
+      throw Exception("Error HTTP ${response.statusCode}");
+    } on SocketException {
+      throw Exception("Sin conexión a internet");
+    } on TimeoutException {
+      throw Exception("El servidor no responde");
+    }
+  }
+
+  /// Alertas de stock agrupadas por producto
+  /// Retorna lista de: { codigo, color, imagen, alertas: [{talla, stock, tipo}] }
+  static Future<List<Map<String, dynamic>>> getDashboardAlertas() async {
+    try {
+      final response =
+      await http.get(Uri.parse("$baseUrl/dashboard/alertas")).timeout(
+        const Duration(seconds: 30),
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          return List<Map<String, dynamic>>.from(body['data']);
+        }
+        throw Exception(body['message'] ?? 'Error en alertas');
+      }
+      throw Exception("Error HTTP ${response.statusCode}");
+    } on SocketException {
+      throw Exception("Sin conexión a internet");
+    } on TimeoutException {
+      throw Exception("El servidor no responde");
+    }
+  }
+
+  /// Top más vendidos
+  /// Retorna lista de: { codigo, color, imagen, ventas }
+  static Future<List<Map<String, dynamic>>> getMasVendidos({int limit = 5}) async {
+    try {
+      final response = await http
+          .get(Uri.parse("$baseUrl/dashboard/mas-vendidos?limit=$limit"))
+          .timeout(const Duration(seconds: 45));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          return List<Map<String, dynamic>>.from(body['data']);
+        }
+        throw Exception(body['message'] ?? 'Error en más vendidos');
+      }
+      throw Exception("Error HTTP ${response.statusCode}");
+    } on SocketException {
+      throw Exception("Sin conexión a internet");
+    } on TimeoutException {
+      throw Exception("El servidor no responde");
+    }
+  }
+
+}
