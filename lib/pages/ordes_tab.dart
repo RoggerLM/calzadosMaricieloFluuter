@@ -4,14 +4,12 @@ import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import '../models/order_model.dart';
 import '../screens/error_view.dart';
 import '../services/api_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter/material.dart';
 
 import '../widgets/skeletons.dart';
 
@@ -405,10 +403,10 @@ class _OrdersTabState extends State<OrdersTab> with WidgetsBindingObserver{
                           ],
                         ),
                       ),
-
+                      /*
                       const SizedBox(height: 16),
 
-                      /*
+
                       // 🔥 BOTÓN SUBIR COMPROBANTE
                       ElevatedButton.icon(
                         icon: _subiendo

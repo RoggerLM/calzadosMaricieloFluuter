@@ -8,6 +8,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
+import '../services/api_service.dart';
+
+
 
 class AddProductPage extends StatefulWidget {
   final Function() onProductAdded;
@@ -32,9 +35,10 @@ class _AddProductPageState extends State<AddProductPage> {
 
   String _selectedCategory = '';
   // Variables para el estado
-  bool _isNew = false;
+  //bool _isNew = false;
   bool _addHalfDozen = false;
-
+  bool _isLoadingCategories = true;
+  List<String> _categories = [];
   final Map<String, int> _sizes = {
     '35': 0,
     '36': 0,
@@ -51,8 +55,32 @@ class _AddProductPageState extends State<AddProductPage> {
   }
 
   Future<void> _loadDefaultCategorias() async{
-    final firestoreService = Provider.of<FirestoreService>(context,listen: false);
-    await firestoreService.loadDefaultCategories();
+    try {
+      //final apiService = ApiService();
+      final categories = await ApiService.getCategories();
+
+      print(categories);
+
+      setState(() {
+        _categories = categories;
+        _isLoadingCategories = false;
+        if (_categories.isNotEmpty) {
+          _selectedCategory = _categories.first;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingCategories = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar categorías: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -82,17 +110,6 @@ class _AddProductPageState extends State<AddProductPage> {
               _buildImageSection(),
               const SizedBox(height: 20),
 
-              // Checkbox de producto nuevo
-              CheckboxListTile(
-                title: const Text('Producto Nuevo'),
-                value: _isNew,
-                onChanged: (value) {
-                  setState(() {
-                    _isNew = value!;
-                  });
-                },
-              ),
-              const SizedBox(height: 20),
 
               // Código del producto
               TextFormField(
@@ -110,25 +127,7 @@ class _AddProductPageState extends State<AddProductPage> {
                 },
               ),
               const SizedBox(height: 16),
-              /*
-              // Nombre del producto
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del Producto',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.shopping_bag),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa el nombre del producto';
-                  }
-                  return null;
-                },
-              ),
 
-              const SizedBox(height: 16),
-              */
               // Color
               TextFormField(
                 controller: _colorController,
@@ -168,54 +167,34 @@ class _AddProductPageState extends State<AddProductPage> {
               const SizedBox(height: 16),
 
               // Categoría
-              StreamBuilder<List<String>>(
-                stream: firestoreService.getCategories(),
-                builder: (context, snapshot) {
-                  if(snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  }
-                  if(snapshot.hasError){
-                    return Text('Error: ${snapshot.error}');
-                  }
-                  final categorias = snapshot.data ?? [];
-
-                  if(categorias.isEmpty){
-                    return const Text('No hay categorias disponibles');
-                  }
-                  if(_selectedCategory.isEmpty && categorias.isNotEmpty){
-                    WidgetsBinding.instance.addPostFrameCallback((_){
-                      setState(() {
-                        _selectedCategory = categorias.first;
-                      });
-                    });
-                  }
-                  return DropdownButtonFormField<String>(
-                    value: _selectedCategory.isNotEmpty ? _selectedCategory : null,
-                    decoration: const InputDecoration(
-                      labelText: 'Categoría',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.category),
-                    ),
-                    items: categorias.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Text(category),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedCategory = newValue!;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Por favor selecciona una categoría';
-                      }
-                      return null;
-                    },
+              _isLoadingCategories
+                  ? const CircularProgressIndicator()
+                  : DropdownButtonFormField<String>(
+                value: _selectedCategory.isNotEmpty ? _selectedCategory : null,
+                decoration: const InputDecoration(
+                  labelText: 'Categoría',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.category),
+                ),
+                items: _categories.map((String category) {
+                  return DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(category),
                   );
-                }
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedCategory = newValue!;
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor selecciona una categoría';
+                  }
+                  return null;
+                },
               ),
+
               const SizedBox(height: 20),
 
               // Título de tallas
@@ -629,11 +608,13 @@ class _AddProductPageState extends State<AddProductPage> {
       }
     }
   }
-
+  /*
   Future<void> _saveProduct() async {
+
     if (_formKey.currentState!.validate()) {
       try {
-        final firestoreService = Provider.of<FirestoreService>(context,listen: false);
+
+        //final firestoreService = Provider.of<FirestoreService>(context,listen: false);
 
         String? imagenBase64;
 
@@ -675,6 +656,55 @@ class _AddProductPageState extends State<AddProductPage> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+ */
+  Future<void> _saveProduct() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final apiService = ApiService();
+
+        String? imagenBase64;
+        if (_selectedImage != null) {
+          final file = File(_selectedImage!.path);
+          final bytes = await file.readAsBytes();
+          imagenBase64 = base64Encode(bytes);
+        }
+
+        final productData = {
+          'codigo': _codeController.text,
+          'color': _colorController.text,
+          'precio': double.parse(_priceController.text),
+          'categoria': _selectedCategory,
+          //'nuevo': _isNew,
+          'imagen': imagenBase64,
+          'tallas': _sizes,
+        };
+
+        await apiService.createProduct(productData);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Producto agregado exitosamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          widget.onProductAdded();
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al guardar producto: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }

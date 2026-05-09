@@ -118,7 +118,7 @@ class FirestoreService {
         .map((snapshot) {
       return snapshot.docs
           .map((doc) => Product.fromFirestore(doc.id, doc.data() as Map<String, dynamic>))
-          .where((product) => product.sizes.values.any((stock) => stock < 3))
+          .where((product) => product.tallas.values.any((stock) => stock < 3))
           .toList();
     });
   }
@@ -127,7 +127,7 @@ class FirestoreService {
   Future<void> updateProductSizes(Product product) async {
     try {
       await _firestore.collection('productos').doc(product.id).update({
-        'tallas': product.sizes,
+        'tallas': product.tallas,
       });
     } catch (e) {
       print('Error actualizando tallas: $e');

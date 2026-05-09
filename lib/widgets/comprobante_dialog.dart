@@ -9,7 +9,7 @@ import 'package:calzados_luciana/services/firestore_service.dart';
 import 'package:calzados_luciana/services/whatsapp_service.dart';
 import 'package:calzados_luciana/models/order_model.dart';
 import 'package:path_provider/path_provider.dart';
-
+/*
 class ComprobanteDialog extends StatefulWidget {
   final Pedido pedido;
 
@@ -48,7 +48,7 @@ class _ComprobanteDialogState extends State<ComprobanteDialog> {
 
         // Guardar en Firestore
         final firestoreService = Provider.of<FirestoreService>(context, listen: false);
-        await firestoreService.uploadComprobante(widget.pedido.codigo, file);
+        await firestoreService.uploadComprobante(widget.pedido.id, file);
 
         // Guardar localmente para mostrar y enviar
         setState(() {
@@ -559,3 +559,5 @@ class _ComprobanteDialogState extends State<ComprobanteDialog> {
     super.dispose();
   }
 }
+
+ */
