@@ -24,6 +24,16 @@ class AddProductPage extends StatefulWidget {
 class _AddProductPageState extends State<AddProductPage> {
   final _formKey = GlobalKey<FormState>();
   XFile? _selectedImage;
+  int get _totalPares => _sizes.values.fold(0, (a, b) => a + b);
+  bool _isLoading = false;
+
+  bool get _formularioListo =>
+      _codeController.text.isNotEmpty &&
+          _colorController.text.isNotEmpty &&
+          _priceController.text.isNotEmpty &&
+          _selectedCategory.isNotEmpty &&
+          _totalPares > 0&&
+          _selectedImage != null;
 
   // Controladores para los campos de texto
   final TextEditingController _nameController = TextEditingController();
@@ -52,6 +62,10 @@ class _AddProductPageState extends State<AddProductPage> {
   void initState(){
     super.initState();
     _loadDefaultCategorias();
+    // 👇 para que setState se llame al escribir en los campos
+    _codeController.addListener(() => setState(() {}));
+    _colorController.addListener(() => setState(() {}));
+    _priceController.addListener(() => setState(() {}));
   }
 
   Future<void> _loadDefaultCategorias() async{
@@ -244,23 +258,114 @@ class _AddProductPageState extends State<AddProductPage> {
               ),
               const SizedBox(height: 30),
 
-              // Botón de agregar producto
+              // ── Resumen de lo que se va a agregar ──
+              if (_totalPares > 0) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.inventory_2, color: Colors.blue.shade700, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Listo para agregar',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              '$_totalPares par${_totalPares == 1 ? '' : 'es'} en '
+                                  '${_sizes.values.where((s) => s > 0).length} talla${_sizes.values.where((s) => s > 0).length == 1 ? '' : 's'}',
+                              style: TextStyle(color: Colors.blue.shade600, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // detalle por talla
+                      Wrap(
+                        spacing: 4,
+                        children: _sizes.entries
+                            .where((e) => e.value > 0)
+                            .map((e) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'T${e.key}×${e.value}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade800,
+                            ),
+                          ),
+                        ))
+                            .toList(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // ── Botón ──
               SizedBox(
                 width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                height: 54,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _formularioListo
+                          ? Colors.blue.shade700
+                          : Colors.grey.shade300,
+                      foregroundColor: _formularioListo
+                          ? Colors.white
+                          : Colors.grey.shade500,
+                      elevation: _formularioListo ? 4 : 0,
+                      shadowColor: _formularioListo
+                          ? Colors.blue.shade200
+                          : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                  ),
-                  onPressed: _saveProduct,
-                  child: const Text(
-                    'Agregar Producto',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    onPressed: (_formularioListo && !_isLoading) ? _saveProduct : null,
+                    child: _isLoading
+                      ? const SizedBox(
+                      height: 22, width: 22,
+                      child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                      )
+                          : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _formularioListo ? Icons.check_circle : Icons.lock_outline,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formularioListo
+                              ? 'Agregar $_totalPares par${_totalPares == 1 ? '' : 'es'}'
+                              : 'Completa el formulario',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -273,6 +378,7 @@ class _AddProductPageState extends State<AddProductPage> {
   }
 
   Widget _buildImageSection() {
+    final faltaImagen = _selectedImage == null && !_isLoadingCategories;
     return Column(
       children: [
         Container(
@@ -281,7 +387,9 @@ class _AddProductPageState extends State<AddProductPage> {
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(// 👇 borde rojo si no hay imagen y ya interactuó con el form
+              color: faltaImagen ? Colors.red.shade300 : Colors.grey.shade300,
+              width: faltaImagen ? 2 : 1,),
           ),
           child: _selectedImage != null
               ? ClipRRect(
@@ -297,12 +405,14 @@ class _AddProductPageState extends State<AddProductPage> {
                     Icon(
                       Icons.shopping_bag_outlined,
                       size: 65,
-                      color: Colors.grey.shade400,
+                      color: faltaImagen
+                          ? Colors.red.shade300
+                          : Colors.grey.shade400,
                     ),
 
                     const SizedBox(height: 8),
                     Text(
-                      'Imagen del\nProducto',
+                      faltaImagen ? 'Imagen requerida' : 'Imagen del\nProducto',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.grey.shade600,
@@ -666,6 +776,17 @@ class _AddProductPageState extends State<AddProductPage> {
       try {
         final apiService = ApiService();
 
+        // Validación extra de tallas
+        if (_totalPares == 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Agrega stock a al menos una talla'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+        setState(() => _isLoading = true);
         String? imagenBase64;
         if (_selectedImage != null) {
           final file = File(_selectedImage!.path);
@@ -705,6 +826,7 @@ class _AddProductPageState extends State<AddProductPage> {
             ),
           );
         }
+        setState(() => _isLoading = false);
       }
     }
   }

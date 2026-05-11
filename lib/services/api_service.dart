@@ -11,6 +11,43 @@ class ApiService {
   static const String baseUrl =
       "https://abrasive-paper-vanish.ngrok-free.dev/api";
 
+
+  /// Crea un nuevo pedido en el backend
+  static Future<Map<String, dynamic>> crearPedido(
+      Map<String, dynamic> body) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse("$baseUrl/pedidos/crearpedido"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      )
+          .timeout(const Duration(seconds: 30));
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode != 200) {
+        throw Exception(data['error'] ?? "Error HTTP ${response.statusCode}");
+      }
+      if (data['success'] != true) {
+        if (data['productos_sin_stock'] != null) {
+          final lista = (data['productos_sin_stock'] as List)
+              .map((p) =>
+          '${p['codigo']} T${p['talla']}: disponible ${p['disponible']}')
+              .join('\n');
+          throw Exception('Stock insuficiente:\n$lista');
+        }
+        throw Exception(data['error'] ?? "Error al crear pedido");
+      }
+
+      return data;
+    } on SocketException {
+      throw Exception("Sin conexión a internet");
+    } on TimeoutException {
+      throw Exception("El servidor no responde (timeout)");
+    }
+  }
+
   static Future<List<Pedido>> getPedidos() async {
     try {
       final response = await http.get(Uri.parse("$baseUrl/showpedidos"));
@@ -59,8 +96,7 @@ class ApiService {
         "image": base64Img,
       };
 
-      // 🔥 DEBUG (ver qué envías)
-      print("📤 BODY: ${jsonEncode(body)}");
+
 
       final response = await http.post(
         url,
@@ -68,9 +104,7 @@ class ApiService {
         body: jsonEncode(body),
       );
 
-      // 🔥 DEBUG (ver respuesta cruda)
-      print("📥 STATUS: ${response.statusCode}");
-      print("📥 BODY: ${response.body}");
+
 
       Map<String, dynamic> data;
 
@@ -185,12 +219,19 @@ class ApiService {
     final url = Uri.parse("$baseUrl/productos/addproductos");
     try {
 
+      // 🔥 DEBUG (ver qué envías)
+      print("📤 BODY: ${jsonEncode(productData)}");
+
       final response = await http.post(
           url,
         body: jsonEncode(productData),
       ).timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 201) {
+      // 🔥 DEBUG (ver respuesta cruda)
+      print("📥 STATUS: ${response.statusCode}");
+      print("📥 BODY: ${response.body}");
+
+      if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
         throw Exception('Error al crear producto: ${response.body}');
@@ -200,27 +241,6 @@ class ApiService {
     }
   }
 
-  Future updateProductStock(String? id, Map<String, Object> updatedData) async {
-    final url = Uri.parse("$baseUrl/productos/updateproducto");
-    try {
-      final body = {
-        "pedido_id": id,
-        "image": updatedData,
-      };
-      final response = await http.put(
-        url,
-        body: json.encode(body),
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Error al actualizar stock: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Error de conexión: $e');
-    }
-  }
   static Future<void> reponerStock({
     required String productoId,
     required Map<String, int> tallas,
@@ -275,6 +295,24 @@ class ApiService {
       throw Exception("⏳ El servidor no responde (timeout)");
     } catch (e) {
       throw Exception("❌ Error inesperado: $e");
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> buscarProductos(String query) async {
+    try {
+      final response = await http
+          .get(Uri.parse("$baseUrl/productos/buscar?q=${Uri.encodeComponent(query)}"))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          return List<Map<String, dynamic>>.from(body['data']);
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 

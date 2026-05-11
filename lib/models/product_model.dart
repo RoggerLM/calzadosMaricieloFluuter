@@ -11,7 +11,7 @@ class Product {
   final String imagen;
   final int stockMinimo;
   final Timestamp createdAt;
-
+  final Timestamp? updatedAt;
   Product({
     this.id,
     required this.codigo,
@@ -22,6 +22,7 @@ class Product {
     required this.imagen,
     this.stockMinimo = 2,
     required this.createdAt,
+    this.updatedAt
   });
 
   // Getter para calcular el stock total
@@ -64,6 +65,10 @@ class Product {
       imagen:      json['imagen'],
       stockMinimo: json['stockMinimo'] ?? 2,
       createdAt:   Timestamp.now(), // el backend no lo manda, valor por defecto
+      updatedAt: json['updatedAt'] != null      // 👈
+          ? Timestamp.fromMillisecondsSinceEpoch(
+          DateTime.parse(json['updatedAt']).millisecondsSinceEpoch)
+          : null,
     );
   }
 

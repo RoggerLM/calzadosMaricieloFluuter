@@ -72,6 +72,7 @@ class _ProductsTabState extends State<ProductsTab> {
           children: [
             _buildSearchAndFilters(categories),
             _buildStockSummary(),
+            _buildUltimaActualizacion(),
             Expanded(child: _buildProductsList()),
           ],
         ),
@@ -582,6 +583,100 @@ class _ProductsTabState extends State<ProductsTab> {
     if (p.isOutOfStock) return 'SIN STOCK';
     if (p.hasLowStock)  return 'STOCK BAJO';
     return 'STOCK OK';
+  }
+
+  Widget _buildUltimaActualizacion() {
+    // Buscar el producto con updatedAt más reciente
+    final actualizados = _products
+        .where((p) => p.updatedAt != null)
+        .toList();
+
+    if (actualizados.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.history, color: Colors.grey.shade500, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'Sin registros de actualización aún',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // El más recientemente actualizado
+    actualizados.sort((a, b) =>
+        b.updatedAt!.compareTo(a.updatedAt!));
+    final ultimo = actualizados.first;
+    final fecha  = ultimo.updatedAt!.toDate();
+
+    final ahora  = DateTime.now();
+    final diff   = ahora.difference(fecha);
+
+    String tiempoRelativo;
+    if (diff.inMinutes < 1) {
+      tiempoRelativo = 'hace un momento';
+    } else if (diff.inMinutes < 60) {
+      tiempoRelativo = 'hace ${diff.inMinutes} min';
+    } else if (diff.inHours < 24) {
+      tiempoRelativo = 'hace ${diff.inHours} h';
+    } else {
+      tiempoRelativo = 'hace ${diff.inDays} día${diff.inDays > 1 ? 's' : ''}';
+    }
+
+    final fechaFormateada =
+        '${fecha.day.toString().padLeft(2, '0')}/'
+        '${fecha.month.toString().padLeft(2, '0')}/'
+        '${fecha.year}  '
+        '${fecha.hour.toString().padLeft(2, '0')}:'
+        '${fecha.minute.toString().padLeft(2, '0')}';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.update, color: Colors.blue.shade600, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Último inventario actualizado $tiempoRelativo',
+                  style: TextStyle(
+                    color: Colors.blue.shade700,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  '${ultimo.codigo} · ${ultimo.color}  —  $fechaFormateada',
+                  style: TextStyle(
+                    color: Colors.blue.shade500,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showUpdateProduct(Product product) {

@@ -12,6 +12,7 @@ import '../services/api_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../widgets/skeletons.dart';
+import 'add_orders_page.dart';
 
 class OrdersTab extends StatefulWidget {
   const OrdersTab({super.key});
@@ -60,18 +61,19 @@ class _OrdersTabState extends State<OrdersTab> with WidgetsBindingObserver{
         onRetry: _loadPedidos,
       );
     }
-    return Stack(
-      children: [
-        ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: _orders.length,
-          itemBuilder: (context, index){
-            final order = _orders[index];
-            return _buildOrderItem(order);
-          },
-        ),
-        if(_subiendo)
-          Positioned.fill(
+    return Scaffold(
+      body: Stack(
+        children: [
+          ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: _orders.length,
+            itemBuilder: (context, index) {
+              final order = _orders[index];
+              return _buildOrderItem(order);
+            },
+          ),
+          if (_subiendo)
+            Positioned.fill(
               child: Container(
                 color: Colors.black.withOpacity(0.6),
                 child: const Center(
@@ -88,8 +90,21 @@ class _OrdersTabState extends State<OrdersTab> with WidgetsBindingObserver{
                   ),
                 ),
               ),
-          ),
-      ],
+            ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blue.shade700,
+        foregroundColor: Colors.white,
+        onPressed: () async {
+          final resultado = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateOrderPage()),
+          );
+          if (resultado == true) _loadPedidos(); // recarga al volver
+        },
+        child: const Icon(Icons.add),
+      ),
     );
 
   }
